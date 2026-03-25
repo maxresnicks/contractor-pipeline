@@ -1,44 +1,31 @@
-# Contractor Productivity Pipeline
-
-Simulated CDC-style data pipeline for tracking contractor productivity, detecting anomalies, and ensuring data reliability in an operations environment.
+# Healthcare Operations Pipeline: Supply & Demand Modeling
 
 ## Overview
+This project simulates the data infrastructure and operational reporting required to manage capacity planning in a high-growth healthcare setting. It focuses on solving a core business problem: aligning Clinician Supply (hiring velocity, ramp-up time) with Patient Demand (intake volume, churn) across multiple regional markets.
 
-This project replicates real-world technical operations workflows involving:
-
-- Ingestion of messy, inconsistent data
-- Incremental data updates (CDC-style)
-- Data cleaning and normalization
-- Metric computation (productivity, efficiency)
-- Anomaly detection for operational issues
+## Goal
+Demonstrate the ability to build scalable reporting infrastructure, handle messy cross-functional data (ATS/HR vs. EMR/Intake), and surface actionable KPIs that allow for "apples-to-apples" comparisons across disparate markets.
 
 ## Tech Stack
-
-- Python (pandas)
-- DuckDB (local data warehouse)
-- SQL
-- (Planned) Streamlit dashboard
+* **Python (pandas):** Data generation and pipeline orchestration
+* **DuckDB:** Local analytical data warehouse 
+* **SQL:** Data transformation, cleaning, and metric computation
+* *(Planned) Streamlit:* Interactive stakeholder dashboard
 
 ## Pipeline Stages
 
-1. **Ingestion**
-   - Simulated contractor activity data
-   - Includes missing values and anomalies
+### 1. Ingestion (`src/ingest.py`)
+* Simulates pulling records from two disconnected systems: an HR/ATS system (Clinicians) and an Intake/EMR system (Patients).
+* Intentionally injects realistic operational anomalies: missing start dates, fat-fingered capacity metrics, duplicate API syncs, and logical system errors.
 
-2. **Transformation**
-   - Cleans and normalizes raw data
-   - Handles nulls and invalid records
+### 2. Transformation (`src/transform.py`) - *In Progress*
+* Loads raw CSVs into DuckDB.
+* Cleans data, handles null values, and standardizes data types.
+* Normalizes market data for regional comparisons.
 
-3. **Metrics**
-   - Calculates productivity metrics (tasks/hour)
-
-4. **Anomaly Detection**
-   - Flags abnormal productivity patterns
-
-## Goal
-
-Demonstrate how to design reliable data workflows that handle messy inputs and surface operational issues proactively.
+### 3. Metrics & Modeling (`src/metrics.py`) - *Planned*
+* Computes utilization rates, forecast vs. actuals, and time-to-ramp.
+* Flags capacity bottlenecks and supply/demand imbalances.
 
 ## Status
-
 !! In progress !!
