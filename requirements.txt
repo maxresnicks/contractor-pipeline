@@ -3,3 +3,4 @@ duckdb
 streamlit
 faker
 tabulate
+altair<5
