@@ -2,80 +2,101 @@ import pandas as pd
 import random
 from faker import Faker
 import os
+from datetime import datetime, timedelta
 
 fake = Faker()
 
-def generate_cue_point_data(num_records=1000):
-    data = []
-    # Simulate a team of 15 contractors
-    contractors = [f"C-{i:03d}" for i in range(1, 16)]
+def generate_healthcare_ops_data(num_clinicians=250, num_patients=6000):
+    # JD mentions 20+ markets. We'll simulate 10 for the data model.
+    markets = ["CA", "NY", "TX", "FL", "IL", "WA", "PA", "GA", "NC", "VA"]
 
-    for _ in range(num_records):
-        contractor_id = random.choice(contractors)
+    # --- 1. CLINICIAN SUPPLY DATA (Simulating an HR/ATS System) ---
+    clinicians = []
+    for i in range(num_clinicians):
+        clinician_id = f"CLIN-{i:04d}"
+        status = random.choices(["Active", "Onboarding", "Offered", "Churned"], weights=[0.6, 0.15, 0.1, 0.15])[0]
         
-        # Base productivity: 100-400 videos per day
-        videos_processed = int(random.gauss(250, 60))
-        if videos_processed < 0: videos_processed = 0
-
-        # Cue points naturally scale with the number of videos processed
-        intro_cues = videos_processed + random.randint(-15, 15)
-        ad_cues = (videos_processed * random.randint(2, 6))
-        credits_cues = videos_processed + random.randint(-10, 10)
-        early_credits_cues = int(videos_processed * 0.4) # Not all videos have these
-
-        # Errors flagged during QA
-        errors_flagged = max(0, int(random.gauss(8, 4)))
-
-        # Hours logged for the shift
-        hours_logged = round(random.uniform(4.0, 8.5), 2)
+        offer_date = fake.date_between(start_date='-1y', end_date='today')
+        # Simulate hiring velocity: time between offer and start date
+        start_date = offer_date + timedelta(days=random.randint(14, 45)) if status in ["Active", "Onboarding", "Churned"] else None
+        
+        # JD specific: ramp-up time and expected patient capacity
+        target_capacity = random.choice([20, 30, 40]) # Patient slots per week
+        ramp_up_weeks = random.randint(2, 6)
 
         row = {
-            "contractor_id": contractor_id,
-            "shift_date": fake.date_between(start_date='-30d', end_date='today').isoformat(),
-            "videos_processed": videos_processed,
-            "intro_cues": max(0, intro_cues),
-            "ad_cues": max(0, ad_cues),
-            "credits_cues": max(0, credits_cues),
-            "early_credits_cues": max(0, early_credits_cues),
-            "errors_flagged": errors_flagged,
-            "hours_logged": hours_logged
+            "clinician_id": clinician_id,
+            "market": random.choice(markets),
+            "status": status,
+            "offer_date": offer_date.isoformat(),
+            "start_date": start_date.isoformat() if start_date else None,
+            "target_capacity": target_capacity,
+            "ramp_up_weeks": ramp_up_weeks
         }
 
-        # --- INTRODUCE MESSY DATA (The real-world anomalies) ---
-        anomaly_roll = random.random()
+        # --- Inject Messy HR Data ---
+        if random.random() < 0.05:
+            # Operational failure: HR forgot to log the start date in the ATS
+            row["start_date"] = None 
+        elif random.random() < 0.03:
+            # Fat-finger data entry (e.g., typing 400 instead of 40 for capacity)
+            row["target_capacity"] *= 10 
 
-        if anomaly_roll < 0.04:
-            # Human error: Forgot to clock out (Missing hours)
-            row["hours_logged"] = None
-        elif anomaly_roll < 0.07:
-            # Fat-finger data entry (Unrealistic volume for one shift)
-            row["videos_processed"] *= 15
-        elif anomaly_roll < 0.09:
-            # System glitch: Negative ad cues
-            row["ad_cues"] = -45
-        elif anomaly_roll < 0.12:
-            # Completely null record from an API timeout or system crash
-            row["videos_processed"] = None
-            row["ad_cues"] = None
+        clinicians.append(row)
 
-        data.append(row)
+    df_clinicians = pd.DataFrame(clinicians)
 
-    df = pd.DataFrame(data)
 
-    # Introduce duplicate rows (very common in automated log ingestion)
-    duplicates = df.sample(frac=0.03)
-    df = pd.concat([df, duplicates], ignore_index=True)
+    # --- 2. PATIENT DEMAND DATA (Simulating an Intake/EMR System) ---
+    patients = []
+    for i in range(num_patients):
+        patient_id = f"PAT-{i:05d}"
+        intake_date = fake.date_between(start_date='-1y', end_date='today')
+        
+        status = random.choices(["Matched", "Waitlisted", "Churned"], weights=[0.7, 0.15, 0.15])[0]
+        
+        churn_date = None
+        if status == "Churned":
+            # JD specific: patient churn modeling
+            churn_date = intake_date + timedelta(days=random.randint(5, 120))
 
-    return df
+        row = {
+            "patient_id": patient_id,
+            "market": random.choice(markets),
+            "intake_date": intake_date.isoformat(),
+            "status": status,
+            "churn_date": churn_date.isoformat() if churn_date else None,
+            "sessions_per_month": random.choice([2, 4]) # Bi-weekly or weekly
+        }
+
+        # --- Inject Messy Intake Data ---
+        if random.random() < 0.04:
+            # Missing market routing (prevents accurate regional forecasting)
+            row["market"] = None 
+        elif random.random() < 0.02 and churn_date:
+            # Logic Error: System says they churned BEFORE their intake date
+            row["churn_date"] = (intake_date - timedelta(days=10)).isoformat() 
+        
+        patients.append(row)
+
+    df_patients = pd.DataFrame(patients)
+    
+    # Introduce duplicates (very common in automated integration syncing)
+    df_patients = pd.concat([df_patients, df_patients.sample(frac=0.03)], ignore_index=True)
+
+    return df_clinicians, df_patients
 
 if __name__ == "__main__":
     # Ensure the data directory exists
     os.makedirs("data", exist_ok=True)
     
-    # Generate the data and save to CSV
-    df = generate_cue_point_data(1500)
-    file_path = "data/raw_contractor_logs.csv"
-    df.to_csv(file_path, index=False)
+    # Generate the data
+    df_supply, df_demand = generate_healthcare_ops_data()
     
-    print(f"✅ Successfully generated {len(df)} rows of messy contractor data!")
-    print(f"📁 Saved to: {file_path}")
+    # Save to two separate CSVs
+    df_supply.to_csv("data/raw_clinicians.csv", index=False)
+    df_demand.to_csv("data/raw_patients.csv", index=False)
+    
+    print(f"✅ Generated {len(df_supply)} clinician records (HR System).")
+    print(f"✅ Generated {len(df_demand)} patient records (Intake System).")
+    print("📁 Saved to data/ folder.")
