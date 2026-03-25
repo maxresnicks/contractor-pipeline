@@ -1,31 +1,28 @@
-# Healthcare Operations Pipeline: Supply & Demand Modeling
+# 🏥 Two Chairs: Market Capacity & Operations Pipeline
 
-## Overview
-This project simulates the data infrastructure and operational reporting required to manage capacity planning in a high-growth healthcare setting. It focuses on solving a core business problem: aligning Clinician Supply (hiring velocity, ramp-up time) with Patient Demand (intake volume, churn) across multiple regional markets.
+An end-to-end data engineering and analytics project designed to model clinician supply vs. patient demand. This project simulates the extraction, transformation, and visualization of disparate healthcare data to identify operational bottlenecks.
 
-## Goal
-Demonstrate the ability to build scalable reporting infrastructure, handle messy cross-functional data (ATS/HR vs. EMR/Intake), and surface actionable KPIs that allow for "apples-to-apples" comparisons across disparate markets.
+## 🎯 Project Overview
+In a hybrid healthcare model like Two Chairs, balancing the "Hiring Pipeline" (Supply) with the "Patient Intake" (Demand) is the core operational challenge. This pipeline bridges the gap between:
+* **HR/ATS Systems:** Tracking clinician offers, starts, and target weekly capacity.
+* **EMR/Intake Systems:** Tracking patient sessions, market routing, and churn.
 
-## Tech Stack
-* **Python (pandas):** Data generation and pipeline orchestration
-* **DuckDB:** Local analytical data warehouse 
-* **SQL:** Data transformation, cleaning, and metric computation
-* *(Planned) Streamlit:* Interactive stakeholder dashboard
+## 🛠 The Tech Stack
+* **Language:** Python 3.11
+* **Database:** DuckDB (OLAP-optimized for fast analytical queries)
+* **Dashboard:** Streamlit (Interactive Web App)
+* **Data Modeling:** SQL (Complex Joins & Conditional Logic)
 
-## Pipeline Stages
+## 🏗 Data Architecture & Pipeline
+1. **Ingestion (`ingest.py`):** Generates 6,000+ rows of synthetic, "messy" healthcare data including common anomalies (missing markets, illogical churn dates).
+2. **Transformation (`transform.py`):** Uses DuckDB to clean and normalize the data, enforcing business logic (e.g., a patient cannot churn before they intake).
+3. **Analytics & Auditing (`metrics.py` & `audit.py`):** * Computes **Market Utilization %** (Weekly Demand / Active Supply).
+    * Conducts **Forecast vs. Actuals Audit** on offer acceptance rates and patient attrition.
 
-### 1. Ingestion (`src/ingest.py`)
-* Simulates pulling records from two disconnected systems: an HR/ATS system (Clinicians) and an Intake/EMR system (Patients).
-* Intentionally injects realistic operational anomalies: missing start dates, fat-fingered capacity metrics, duplicate API syncs, and logical system errors.
+## 📊 Key Insights Captured
+* **Supply Shortages:** Identification of "Bottleneck" markets where patient demand exceeds clinician capacity.
+* **Hiring Efficiency:** Monitoring whether the recruiting team is hitting the 85% offer-to-start target.
+* **Churn Logic:** Identifying regions where patient attrition is higher than the 15% model baseline.
 
-### 2. Transformation (`src/transform.py`) - *In Progress*
-* Loads raw CSVs into DuckDB.
-* Cleans data, handles null values, and standardizes data types.
-* Normalizes market data for regional comparisons.
-
-### 3. Metrics & Modeling (`src/metrics.py`) - *Planned*
-* Computes utilization rates, forecast vs. actuals, and time-to-ramp.
-* Flags capacity bottlenecks and supply/demand imbalances.
-
-## Status
-!! In progress !!
+---
+*Developed by Max Resnick for the Operations Analyst role at Two Chairs.*
