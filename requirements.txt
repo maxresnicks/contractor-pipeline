@@ -1,6 +1,6 @@
 pandas
 duckdb
-streamlit
+streamlit>=1.35.0
 faker
 tabulate
 altair<5
