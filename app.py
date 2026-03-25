@@ -25,8 +25,12 @@ def load_data(query):
 # ==========================================
 if page == "📊 Executive Dashboard":
     st.title("🪑🪑 Two Chairs: Market Capacity & Operations Dashboard")
-    st.markdown("Monitoring Supply (Clinicians) vs. Demand (Patients) across 10 regional markets.\nThe following is a data anaylsis and engineering dashboard app desgined to mimick the type of work I think I'd be doing at Two Chairs")
-
+    st.markdown("""
+    Monitoring Supply (Clinicians) vs. Demand (Patients) across 10 regional markets.
+    
+    The following is a data analysis and engineering dashboard app designed to mimic the 
+    type of work I think I'd be doing at Two Chairs.
+    """)
     try:
         health_df = load_data("SELECT * FROM market_health_dashboard ORDER BY utilization_pct DESC")
         clinician_df = load_data("SELECT * FROM audit_clinician_hiring")
