@@ -41,16 +41,16 @@ if page == "📊 Executive Dashboard":
     *Simulating active capacity plus hiring forecasts.*
     """)
 
-    # Apply the "What-If" logic to our supply via SQL
+    # Apply the "What-If" logic using ACTUAL column names
     query = f"""
         SELECT 
             market,
-            active_clinicians,
-            total_active_capacity + ({extra_hires} * {avg_capacity}) as simulated_capacity,
-            weekly_session_demand,
+            supply_capacity,
+            supply_capacity + ({extra_hires} * {avg_capacity}) as simulated_capacity,
+            demand_volume,
             waitlisted_patients,
             operational_status,
-            ROUND((weekly_session_demand / (total_active_capacity + ({extra_hires} * {avg_capacity}))) * 100, 1) as simulated_utilization
+            ROUND((demand_volume / (supply_capacity + ({extra_hires} * {avg_capacity}))) * 100, 1) as simulated_utilization
         FROM market_health_dashboard
         ORDER BY simulated_utilization DESC
     """
@@ -78,7 +78,8 @@ if page == "📊 Executive Dashboard":
     
     with c1:
         st.subheader("Regional Utilization & Capacity")
-        st.dataframe(health_df[['market', 'active_clinicians', 'simulated_capacity', 'weekly_session_demand', 'simulated_utilization']], use_container_width=True)
+        display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'operational_status']
+        st.dataframe(health_df[display_cols], use_container_width=True)
     
     with c2:
         # FEATURE 4: THE WAITLIST MAP (Mock Coordinates)
@@ -87,7 +88,7 @@ if page == "📊 Executive Dashboard":
             'lat': [37.77, 34.05, 40.71, 32.77, 47.60, 39.73, 25.76, 33.74, 39.95, 42.36],
             'lon': [-122.41, -118.24, -74.00, -96.79, -122.33, -104.99, -80.19, -84.38, -75.16, -71.05],
             'market': ['CA', 'CA-S', 'NY', 'TX', 'WA', 'CO', 'FL', 'GA', 'PA', 'MA'],
-            'demand': health_df['weekly_session_demand']
+            'demand': health_df['demand_volume']
         })
         st.map(map_data, size='demand', color='#ff4b4b')
 
