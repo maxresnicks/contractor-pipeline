@@ -1,3 +1,5 @@
+#This script creates 2 csvs that simulate HR/ATS data about clinicians and EMR data about patients 
+
 import pandas as pd
 import random
 from faker import Faker

@@ -1,3 +1,5 @@
+# This script conducts multiple 'Forecast vs. Actuals' audits by comparing real-world clinician starts (from raw_clinicians.csv) and patient churn (from raw_patients.csv) against financial model assumptions (that I've assumed).
+
 from utils import get_connection
 import pandas as pd
 

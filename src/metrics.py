@@ -1,3 +1,5 @@
+# This script calculates regional market health by comparing active clinician capacity (Supply) against weekly patient session requirements (Demand).
+
 from utils import get_connection
 import pandas as pd
 
