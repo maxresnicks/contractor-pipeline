@@ -92,16 +92,36 @@ if page == "📊 Executive Dashboard":
                 * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
             """)
     
-    with c2:
-        # FEATURE 4: THE WAITLIST MAP (Mock Coordinates)
-        st.subheader("📍 Demand Heat Map")
-        map_data = pd.DataFrame({
-            'lat': [37.77, 34.05, 40.71, 32.77, 47.60, 39.73, 25.76, 33.74, 39.95, 42.36],
-            'lon': [-122.41, -118.24, -74.00, -96.79, -122.33, -104.99, -80.19, -84.38, -75.16, -71.05],
-            'market': ['CA', 'CA-S', 'NY', 'TX', 'WA', 'CO', 'FL', 'GA', 'PA', 'MA'],
-            'demand': health_df['demand_volume']
-        })
-        st.map(map_data, size='demand', color='#ff4b4b')
+   with c2:
+        # FEATURE 4: DYNAMIC DEMAND HEAT MAP
+        st.subheader("📍 Demand & Health Map")
+        
+        # 1. Map coordinates cleanly to our actual dataframe
+        coords = {
+            'CA': [37.77, -122.41], 'CA-S': [34.05, -118.24], 
+            'NY': [40.71, -74.00], 'TX': [32.77, -96.79], 
+            'WA': [47.60, -122.33], 'CO': [39.73, -104.99], 
+            'FL': [25.76, -80.19], 'GA': [33.74, -84.38], 
+            'PA': [39.95, -75.16], 'MA': [42.36, -71.05]
+        }
+        
+        map_df = health_df.copy()
+        map_df['lat'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[0])
+        map_df['lon'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[1])
+        
+        # 2. Scale the size exponentially so differences are obvious on a national scale (Multiplier: 800)
+        map_df['scaled_demand'] = map_df['demand_volume'] * 800 
+        
+        # 3. Dynamic Coloring based on Bottleneck Status
+        def get_status_color(status):
+            if 'BOTTLENECK' in status: return '#EF4444' # Red
+            elif 'WARNING' in status: return '#F59E0B'  # Yellow
+            else: return '#10B981'                      # Green
+            
+        map_df['status_color'] = map_df['operational_status'].apply(get_status_color)
+        
+        # 4. Render the map
+        st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
 
     # --- THIRD ROW: Churn & Hiring ---
     st.divider()
