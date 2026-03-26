@@ -9,7 +9,6 @@ st.set_page_config(page_title="Two Chairs: Capacity Dashboard", page_icon="🪑"
 # --- Database Connection ---
 @st.cache_data
 def load_data(query):
-    # Ensure the path matches your repo structure
     conn = duckdb.connect("db/warehouse.duckdb")
     df = conn.execute(query).fetchdf()
     conn.close()
@@ -37,11 +36,11 @@ if page == "📊 Executive Dashboard":
 if page == "📊 Executive Dashboard":
     st.title("🪑🪑 Two Chairs: Market Capacity & Operations Dashboard")
     st.markdown("""
-    Monitoring Supply (Clinicians) vs. Demand (Patients) across 10 regional markets.
+    Monitoring Supply (Clinicians) vs. Demand (Patients) across regional markets.
     *Simulating active capacity plus hiring forecasts.*
     """)
 
-    # Apply the "What-If" logic using ACTUAL column names
+    # Apply the "What-If" logic using ACTUAL column names and dynamic statuses
     query = f"""
         SELECT 
             market,
@@ -49,7 +48,11 @@ if page == "📊 Executive Dashboard":
             supply_capacity + ({extra_hires} * {avg_capacity}) as simulated_capacity,
             demand_volume,
             waitlisted_patients,
-            operational_status,
+            CASE 
+                WHEN (demand_volume / (supply_capacity + ({extra_hires} * {avg_capacity}))) > 1.0 THEN '🚨 BOTTLENECK'
+                WHEN (demand_volume / (supply_capacity + ({extra_hires} * {avg_capacity}))) > 0.85 THEN '⚠️ WARNING'
+                ELSE '✅ HEALTHY'
+            END as simulated_status,
             ROUND((demand_volume / (supply_capacity + ({extra_hires} * {avg_capacity}))) * 100, 1) as simulated_utilization
         FROM market_health_dashboard
         ORDER BY simulated_utilization DESC
@@ -68,7 +71,7 @@ if page == "📊 Executive Dashboard":
     avg_util = health_df['simulated_utilization'].mean()
     col1.metric("Avg Market Utilization", f"{avg_util:.1f}%", 
                 delta=f"{avg_util - 92:.1f}%", delta_color="inverse")
-    col2.metric("Simulated New Supply", f"+{extra_hires * 10} Clinicians", f"{extra_hires * 10 * avg_capacity} sessions/wk")
+    col2.metric("Simulated New Supply", f"+{extra_hires * len(health_df)} Clinicians", f"+{extra_hires * len(health_df) * avg_capacity} sessions/wk")
     col3.metric("Critical Markets", len(health_df[health_df['simulated_utilization'] > 100]))
 
     st.divider()
@@ -78,7 +81,7 @@ if page == "📊 Executive Dashboard":
     
     with c1:
         st.subheader("Regional Utilization & Capacity")
-        display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'operational_status']
+        display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'simulated_status']
         st.dataframe(health_df[display_cols], use_container_width=True)
         
         with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
@@ -87,45 +90,52 @@ if page == "📊 Executive Dashboard":
             * **simulated_capacity:** Baseline supply + the simulated new hires from the sidebar slider.
             * **demand_volume:** The total weekly sessions required by patients.
             * **simulated_utilization:** `(Demand / Simulated Capacity) * 100`. Represents how "full" a market is. 
-            * **operational_status:** * **BOTTLENECK:** Utilization is >100%. We cannot serve our current demand.
+            * **simulated_status:** * **BOTTLENECK:** Utilization is >100%. We cannot serve our current demand.
                 * **WARNING:** Utilization is >85%. Nearing capacity; prioritize hiring.
                 * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
             """)
-
+    
     with c2:
         # FEATURE 4: DYNAMIC DEMAND HEAT MAP
         st.subheader("📍 Demand & Health Map")
         
-        # 1. Map coordinates cleanly to our actual dataframe
+        # Map coordinates cleanly for ALL 50 states
         coords = {
-            'CA': [37.77, -122.41], 'CA-S': [34.05, -118.24], 
-            'NY': [40.71, -74.00], 'TX': [32.77, -96.79], 
-            'WA': [47.60, -122.33], 'CO': [39.73, -104.99], 
-            'FL': [25.76, -80.19], 'GA': [33.74, -84.38], 
-            'PA': [39.95, -75.16], 'MA': [42.36, -71.05]
+            "AL": [32.8, -86.8], "AK": [61.4, -152.4], "AZ": [33.4, -111.9], "AR": [35.0, -92.4], 
+            "CA": [36.1, -119.7], "CO": [39.1, -105.3], "CT": [41.6, -72.8], "DE": [39.3, -75.5], 
+            "FL": [27.8, -81.7], "GA": [33.0, -83.6], "HI": [21.1, -157.5], "ID": [44.2, -114.5], 
+            "IL": [40.3, -89.0], "IN": [39.8, -86.3], "IA": [42.0, -93.2], "KS": [38.5, -96.7], 
+            "KY": [37.7, -84.7], "LA": [31.2, -91.9], "ME": [44.7, -69.4], "MD": [39.1, -76.8], 
+            "MA": [42.2, -71.5], "MI": [43.3, -84.5], "MN": [45.7, -93.9], "MS": [32.7, -89.7], 
+            "MO": [38.5, -92.3], "MT": [46.9, -110.5], "NE": [41.1, -98.3], "NV": [38.3, -117.1], 
+            "NH": [43.5, -71.6], "NJ": [40.3, -74.5], "NM": [34.8, -106.2], "NY": [42.2, -74.9], 
+            "NC": [35.6, -79.8], "ND": [47.5, -99.8], "OH": [40.4, -82.8], "OK": [35.6, -96.9], 
+            "OR": [44.6, -122.1], "PA": [40.6, -77.2], "RI": [41.7, -71.5], "SC": [33.9, -80.9], 
+            "SD": [44.3, -99.4], "TN": [35.7, -86.7], "TX": [31.1, -97.6], "UT": [40.2, -111.9], 
+            "VT": [44.0, -72.7], "VA": [37.8, -78.2], "WA": [47.4, -121.5], "WV": [38.5, -81.0], 
+            "WI": [44.3, -89.6], "WY": [42.8, -107.3]
         }
         
         map_df = health_df.copy()
         
-        # 2. Add Lat/Lon and banish "Null Island" (0,0) off the coast of Africa
+        # Add Lat/Lon and filter out "Null Island" (0,0)
         map_df['lat'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[0])
         map_df['lon'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[1])
         map_df = map_df[(map_df['lat'] != 0) & (map_df['lon'] != 0)] 
         
-        # 3. Scale the size exponentially so differences are obvious
+        # Scale the size exponentially
         map_df['scaled_demand'] = map_df['demand_volume'] * 800 
         
-        # 4. REAL-TIME DYNAMIC COLORING based on the Slider!
+        # REAL-TIME DYNAMIC COLORING
         def get_dynamic_color(utilization):
-            if utilization > 100: return '#EF4444' # Red (Bottleneck)
-            elif utilization > 85: return '#F59E0B'  # Yellow (Warning)
-            else: return '#10B981'                   # Green (Healthy)
+            if utilization > 100: return '#EF4444' # Red
+            elif utilization > 85: return '#F59E0B'  # Yellow
+            else: return '#10B981'                   # Green
             
-        # We apply the color to the SIMULATED math, not the static database column
         map_df['status_color'] = map_df['simulated_utilization'].apply(get_dynamic_color)
         
-        # 5. Render the map
         st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
+
     # --- THIRD ROW: Churn & Hiring ---
     st.divider()
     col_a, col_b = st.columns(2)
