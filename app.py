@@ -76,86 +76,80 @@ if page == "📊 Executive Dashboard":
 
     st.divider()
 
-    # --- SECOND ROW: Table & Map ---
-    c1, c2 = st.columns([2, 1])
+    # --- SECOND ROW: Regional Table ---
+    st.subheader("Regional Utilization & Capacity")
+    display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'simulated_status']
     
+    # Make a copy and format it
+    display_df = health_df[display_cols].copy()
+    display_df.index = display_df.index + 1 
+    
+    # Rename columns for absolute clarity in healthcare operations
+    display_df = display_df.rename(columns={
+        'market': 'Market',
+        'supply_capacity': 'Current Capacity (Weekly Appointments)',
+        'simulated_capacity': 'Projected Capacity (With Hires)',
+        'demand_volume': 'Patient Demand (Weekly Appointments)',
+        'simulated_utilization': 'Projected Utilization (%)',
+        'simulated_status': 'Capacity Status'
+    })
+    
+    st.dataframe(display_df, use_container_width=True)
+    
+    with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
+        st.markdown("""
+        * **Current Capacity:** The baseline weekly patient slots available across all *Active* clinicians.
+        * **Projected Capacity:** Baseline supply + the simulated new hires from the sidebar slider.
+        * **Patient Demand:** The total weekly sessions required by patients.
+        * **Projected Utilization:** `(Demand / Projected Capacity) * 100`. Represents how "full" a market is. 
+        * **Capacity Status:** * **BOTTLENECK:** Utilization is >100%. We cannot serve our current demand.
+            * **WARNING:** Utilization is >85%. Nearing capacity; prioritize hiring.
+            * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
+        """)
 
-    with c1:
-        st.subheader("Regional Utilization & Capacity")
-        display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'simulated_status']
-        
-        # Make a copy of the data so we don't mess up the map's math
-        display_df = health_df[display_cols].copy()
-        
-        # 1. Change the index from 0-based to 1-based
-        display_df.index = display_df.index + 1 
-        
-        # 2. Rename the columns for a clean, executive look
-        # 2. Rename columns for absolute clarity in healthcare operations
-        display_df = display_df.rename(columns={
-            'market': 'Market',
-            'supply_capacity': 'Current Capacity (Weekly Appointments)',
-            'simulated_capacity': 'Projected Capacity (With Hires)',
-            'demand_volume': 'Patient Demand (Weekly Appointments)',
-            'simulated_utilization': 'Projected Utilization (%)',
-            'simulated_status': 'Capacity Status'
-        })
-        
-        st.dataframe(display_df, use_container_width=True)
-    
-        with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
-            st.markdown("""
-            * **supply_capacity:** The baseline weekly patient slots available across all *Active* clinicians.
-            * **simulated_capacity:** Baseline supply + the simulated new hires from the sidebar slider.
-            * **demand_volume:** The total weekly sessions required by patients.
-            * **simulated_utilization:** `(Demand / Simulated Capacity) * 100`. Represents how "full" a market is. 
-            * **simulated_status:** * **BOTTLENECK:** Utilization is >100%. We cannot serve our current demand.
-                * **WARNING:** Utilization is >85%. Nearing capacity; prioritize hiring.
-                * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
-            """)
-    
-    with c2:
-        # FEATURE 4: DYNAMIC DEMAND HEAT MAP
-        st.subheader("📍 Demand & Health Map")
-        
-        # Map coordinates cleanly for ALL 50 states
-        coords = {
-            "AL": [32.8, -86.8], "AK": [61.4, -152.4], "AZ": [33.4, -111.9], "AR": [35.0, -92.4], 
-            "CA": [36.1, -119.7], "CO": [39.1, -105.3], "CT": [41.6, -72.8], "DE": [39.3, -75.5], 
-            "FL": [27.8, -81.7], "GA": [33.0, -83.6], "HI": [21.1, -157.5], "ID": [44.2, -114.5], 
-            "IL": [40.3, -89.0], "IN": [39.8, -86.3], "IA": [42.0, -93.2], "KS": [38.5, -96.7], 
-            "KY": [37.7, -84.7], "LA": [31.2, -91.9], "ME": [44.7, -69.4], "MD": [39.1, -76.8], 
-            "MA": [42.2, -71.5], "MI": [43.3, -84.5], "MN": [45.7, -93.9], "MS": [32.7, -89.7], 
-            "MO": [38.5, -92.3], "MT": [46.9, -110.5], "NE": [41.1, -98.3], "NV": [38.3, -117.1], 
-            "NH": [43.5, -71.6], "NJ": [40.3, -74.5], "NM": [34.8, -106.2], "NY": [42.2, -74.9], 
-            "NC": [35.6, -79.8], "ND": [47.5, -99.8], "OH": [40.4, -82.8], "OK": [35.6, -96.9], 
-            "OR": [44.6, -122.1], "PA": [40.6, -77.2], "RI": [41.7, -71.5], "SC": [33.9, -80.9], 
-            "SD": [44.3, -99.4], "TN": [35.7, -86.7], "TX": [31.1, -97.6], "UT": [40.2, -111.9], 
-            "VT": [44.0, -72.7], "VA": [37.8, -78.2], "WA": [47.4, -121.5], "WV": [38.5, -81.0], 
-            "WI": [44.3, -89.6], "WY": [42.8, -107.3]
-        }
-        
-        map_df = health_df.copy()
-        
-        # Add Lat/Lon and filter out "Null Island" (0,0)
-        map_df['lat'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[0])
-        map_df['lon'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[1])
-        map_df = map_df[(map_df['lat'] != 0) & (map_df['lon'] != 0)] 
-        
-        # Scale the size exponentially
-        map_df['scaled_demand'] = map_df['demand_volume'] * 400 
-        
-        # REAL-TIME DYNAMIC COLORING
-        def get_dynamic_color(utilization):
-            if utilization > 100: return '#EF4444' # Red
-            elif utilization > 85: return '#F59E0B'  # Yellow
-            else: return '#10B981'                   # Green
-            
-        map_df['status_color'] = map_df['simulated_utilization'].apply(get_dynamic_color)
-        
-        st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
+    st.divider()
 
-    # --- THIRD ROW: Churn & Hiring ---
+    # --- THIRD ROW: Demand Map ---
+    st.subheader("📍 Demand & Health Map")
+    
+    # Map coordinates cleanly for ALL 50 states
+    coords = {
+        "AL": [32.8, -86.8], "AK": [61.4, -152.4], "AZ": [33.4, -111.9], "AR": [35.0, -92.4], 
+        "CA": [36.1, -119.7], "CO": [39.1, -105.3], "CT": [41.6, -72.8], "DE": [39.3, -75.5], 
+        "FL": [27.8, -81.7], "GA": [33.0, -83.6], "HI": [21.1, -157.5], "ID": [44.2, -114.5], 
+        "IL": [40.3, -89.0], "IN": [39.8, -86.3], "IA": [42.0, -93.2], "KS": [38.5, -96.7], 
+        "KY": [37.7, -84.7], "LA": [31.2, -91.9], "ME": [44.7, -69.4], "MD": [39.1, -76.8], 
+        "MA": [42.2, -71.5], "MI": [43.3, -84.5], "MN": [45.7, -93.9], "MS": [32.7, -89.7], 
+        "MO": [38.5, -92.3], "MT": [46.9, -110.5], "NE": [41.1, -98.3], "NV": [38.3, -117.1], 
+        "NH": [43.5, -71.6], "NJ": [40.3, -74.5], "NM": [34.8, -106.2], "NY": [42.2, -74.9], 
+        "NC": [35.6, -79.8], "ND": [47.5, -99.8], "OH": [40.4, -82.8], "OK": [35.6, -96.9], 
+        "OR": [44.6, -122.1], "PA": [40.6, -77.2], "RI": [41.7, -71.5], "SC": [33.9, -80.9], 
+        "SD": [44.3, -99.4], "TN": [35.7, -86.7], "TX": [31.1, -97.6], "UT": [40.2, -111.9], 
+        "VT": [44.0, -72.7], "VA": [37.8, -78.2], "WA": [47.4, -121.5], "WV": [38.5, -81.0], 
+        "WI": [44.3, -89.6], "WY": [42.8, -107.3]
+    }
+    
+    map_df = health_df.copy()
+    
+    # Add Lat/Lon and filter out "Null Island" (0,0)
+    map_df['lat'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[0])
+    map_df['lon'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[1])
+    map_df = map_df[(map_df['lat'] != 0) & (map_df['lon'] != 0)] 
+    
+    # Scale the size exponentially
+    map_df['scaled_demand'] = map_df['demand_volume'] * 800 
+    
+    # REAL-TIME DYNAMIC COLORING
+    def get_dynamic_color(utilization):
+        if utilization > 100: return '#EF4444' # Red
+        elif utilization > 85: return '#F59E0B'  # Yellow
+        else: return '#10B981'                   # Green
+        
+    map_df['status_color'] = map_df['simulated_utilization'].apply(get_dynamic_color)
+    
+    st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
+
+    # --- FOURTH ROW: Churn & Hiring ---
     st.divider()
     col_a, col_b = st.columns(2)
     
