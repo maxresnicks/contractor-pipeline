@@ -106,21 +106,25 @@ if page == "📊 Executive Dashboard":
         }
         
         map_df = health_df.copy()
+        
+        # 2. Add Lat/Lon and banish "Null Island" (0,0) off the coast of Africa
         map_df['lat'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[0])
         map_df['lon'] = map_df['market'].map(lambda x: coords.get(x, [0,0])[1])
+        map_df = map_df[(map_df['lat'] != 0) & (map_df['lon'] != 0)] 
         
-        # 2. Scale the size exponentially so differences are obvious on a national scale (Multiplier: 800)
+        # 3. Scale the size exponentially so differences are obvious
         map_df['scaled_demand'] = map_df['demand_volume'] * 800 
         
-        # 3. Dynamic Coloring based on Bottleneck Status
-        def get_status_color(status):
-            if 'BOTTLENECK' in status: return '#EF4444' # Red
-            elif 'WARNING' in status: return '#F59E0B'  # Yellow
-            else: return '#10B981'                      # Green
+        # 4. REAL-TIME DYNAMIC COLORING based on the Slider!
+        def get_dynamic_color(utilization):
+            if utilization > 100: return '#EF4444' # Red (Bottleneck)
+            elif utilization > 85: return '#F59E0B'  # Yellow (Warning)
+            else: return '#10B981'                   # Green (Healthy)
             
-        map_df['status_color'] = map_df['operational_status'].apply(get_status_color)
+        # We apply the color to the SIMULATED math, not the static database column
+        map_df['status_color'] = map_df['simulated_utilization'].apply(get_dynamic_color)
         
-        # 4. Render the map
+        # 5. Render the map
         st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
     # --- THIRD ROW: Churn & Hiring ---
     st.divider()
