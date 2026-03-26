@@ -79,11 +79,30 @@ if page == "📊 Executive Dashboard":
     # --- SECOND ROW: Table & Map ---
     c1, c2 = st.columns([2, 1])
     
+
     with c1:
         st.subheader("Regional Utilization & Capacity")
         display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'simulated_status']
-        st.dataframe(health_df[display_cols], use_container_width=True)
         
+        # Make a copy of the data so we don't mess up the map's math
+        display_df = health_df[display_cols].copy()
+        
+        # 1. Change the index from 0-based to 1-based
+        display_df.index = display_df.index + 1 
+        
+        # 2. Rename the columns for a clean, executive look
+        # 2. Rename columns for absolute clarity in healthcare operations
+        display_df = display_df.rename(columns={
+            'market': 'Market',
+            'supply_capacity': 'Current Capacity (Weekly Appointments)',
+            'simulated_capacity': 'Projected Capacity (With Hires)',
+            'demand_volume': 'Patient Demand (Weekly Appointments)',
+            'simulated_utilization': 'Projected Utilization (%)',
+            'simulated_status': 'Capacity Status'
+        })
+        
+        st.dataframe(display_df, use_container_width=True)
+    
         with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
             st.markdown("""
             * **supply_capacity:** The baseline weekly patient slots available across all *Active* clinicians.
