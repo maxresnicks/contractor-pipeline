@@ -124,7 +124,7 @@ if page == "📊 Executive Dashboard":
         map_df = map_df[(map_df['lat'] != 0) & (map_df['lon'] != 0)] 
         
         # Scale the size exponentially
-        map_df['scaled_demand'] = map_df['demand_volume'] * 800 
+        map_df['scaled_demand'] = map_df['demand_volume'] * 400 
         
         # REAL-TIME DYNAMIC COLORING
         def get_dynamic_color(utilization):
