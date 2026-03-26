@@ -91,8 +91,8 @@ if page == "📊 Executive Dashboard":
                 * **WARNING:** Utilization is >85%. Nearing capacity; prioritize hiring.
                 * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
             """)
-    
-   with c2:
+
+    with c2:
         # FEATURE 4: DYNAMIC DEMAND HEAT MAP
         st.subheader("📍 Demand & Health Map")
         
@@ -122,7 +122,6 @@ if page == "📊 Executive Dashboard":
         
         # 4. Render the map
         st.map(map_df, latitude='lat', longitude='lon', size='scaled_demand', color='status_color')
-
     # --- THIRD ROW: Churn & Hiring ---
     st.divider()
     col_a, col_b = st.columns(2)
