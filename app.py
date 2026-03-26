@@ -80,6 +80,17 @@ if page == "📊 Executive Dashboard":
         st.subheader("Regional Utilization & Capacity")
         display_cols = ['market', 'supply_capacity', 'simulated_capacity', 'demand_volume', 'simulated_utilization', 'operational_status']
         st.dataframe(health_df[display_cols], use_container_width=True)
+        
+        with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
+            st.markdown("""
+            * **supply_capacity:** The baseline weekly patient slots available across all *Active* clinicians.
+            * **simulated_capacity:** Baseline supply + the simulated new hires from the sidebar slider.
+            * **demand_volume:** The total weekly sessions required by patients.
+            * **simulated_utilization:** `(Demand / Simulated Capacity) * 100`. Represents how "full" a market is. 
+            * **operational_status:** * **BOTTLENECK:** Utilization is >100%. We cannot serve our current demand.
+                * **WARNING:** Utilization is >85%. Nearing capacity; prioritize hiring.
+                * **HEALTHY:** Utilization is <85%. Ample room for new patient intake.
+            """)
     
     with c2:
         # FEATURE 4: THE WAITLIST MAP (Mock Coordinates)
@@ -101,9 +112,26 @@ if page == "📊 Executive Dashboard":
         churn_chart = patient_df[['market', 'actual_churn_rate_pct', 'target_churn_rate_pct']].set_index('market')
         st.bar_chart(churn_chart)
         
+        with st.expander("ℹ️ Understanding this chart"):
+            st.markdown("""
+            This audits our demand assumptions by comparing actual market attrition against financial models.
+            * **Target Churn Rate:** The business model assumes a baseline 15% patient drop-off.
+            * **Actual Churn Rate:** The real historical churn rate derived from EMR data.
+            * **Insight:** Markets where actual churn significantly exceeds the 15% target indicate potential operational issues (poor clinician matching, long wait times).
+            """)
+        
     with col_b:
         st.subheader("Clinician Offer Acceptance Audit")
         st.dataframe(clinician_df[['market', 'total_offers_extended', 'actual_starts', 'actual_start_rate_pct']], use_container_width=True)
+        
+        with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
+            st.markdown("""
+            Monitoring actual starts against the **85% Offer Acceptance** target baseline.
+            * **total_offers_extended:** Total job offers sent to clinician candidates in the HR system.
+            * **actual_starts:** Count of clinicians who reached 'Active' or 'Onboarding' status.
+            * **actual_start_rate_pct:** `(actual_starts / total_offers) * 100`. 
+            * **Insight:** If a market's start rate falls far below 85%, Recruiting needs to audit compensation competitiveness or onboarding delays in that region.
+            """)
 
 # ==========================================
 # PAGE 2: UNDER THE HOOD
@@ -145,10 +173,11 @@ elif page == "🛠️ Under the Hood":
         c3.metric("Rejected: Missing Routing", missing_mkt)
         
         st.dataframe(raw_p[(raw_p['market'].isna()) | (raw_p['churn_date'] < raw_p['intake_date'])].head(10), use_container_width=True)
+        st.caption("Auto-flagged records for Source System Cleanup.")
     except:
         st.error("Raw data files not found in /data folder.")
 
-        # ==========================================
+# ==========================================
 # PAGE 3: ARCHITECTURE README
 # ==========================================
 elif page == "📖 Architecture README":
