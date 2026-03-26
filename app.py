@@ -19,7 +19,7 @@ def load_data(query):
 # SIDEBAR & NAVIGATION
 # ==========================================
 st.sidebar.title("🪑 Operations Menu")
-page = st.sidebar.radio("Go to:", ["📊 Executive Dashboard", "🛠️ Under the Hood"])
+page = st.sidebar.radio("Go to:", ["📊 Executive Dashboard", "🛠️ Under the Hood", "📖 Architecture README"])
 
 st.sidebar.divider()
 
@@ -147,3 +147,116 @@ elif page == "🛠️ Under the Hood":
         st.dataframe(raw_p[(raw_p['market'].isna()) | (raw_p['churn_date'] < raw_p['intake_date'])].head(10), use_container_width=True)
     except:
         st.error("Raw data files not found in /data folder.")
+
+        # ==========================================
+# PAGE 3: ARCHITECTURE README
+# ==========================================
+elif page == "📖 Architecture README":
+    st.title("📖 Project Architecture & README")
+    st.markdown("""
+    This project simulates a complete data engineering and analytics pipeline for a hybrid healthcare provider. 
+    The core operational challenge is balancing **Supply (Clinicians)** with **Demand (Patients)** across multiple regional markets. 
+    
+    This application automates the ingestion, transformation, and visualization of disparate HR and EMR data to identify capacity bottlenecks.
+    """)
+
+    st.divider()
+
+    st.header("Step 1: Synthetic Data Generation (`ingest.py`)")
+    st.markdown("""
+    Because real healthcare data is protected by HIPAA, this pipeline starts by generating over 6,000 rows of highly realistic, synthetic data using Python's `Faker` library. 
+    
+    Crucially, this script intentionally injects **operational anomalies** (e.g., missing market routing, illogical dates, and fat-fingered capacity targets) to simulate the messy reality of enterprise source systems.
+    """)
+    st.code("""
+# src/ingest.py snippet: Injecting real-world anomalies into EMR data
+def generate_patients(num_records=5000):
+    patients = []
+    for _ in range(num_records):
+        intake = fake.date_between(start_date='-1y', end_date='today')
+        
+        # Inject illogical churn dates (churning before intake) ~3% of the time
+        if random.random() < 0.03:
+            churn = intake - timedelta(days=random.randint(1, 30))
+        else:
+            churn = intake + timedelta(days=random.randint(10, 100)) if random.random() < 0.15 else None
+            
+        patients.append({
+            "patient_id": f"PAT-{fake.unique.random_int(min=10000, max=99999)}",
+            "market": random.choice(MARKETS) if random.random() > 0.04 else None, # 4% missing routing
+            "intake_date": intake,
+            "churn_date": churn,
+            "status": random.choices(['Matched', 'Waitlisted', 'Churned'], weights=[0.7, 0.15, 0.15])[0]
+        })
+    return pd.DataFrame(patients)
+    """, language="python")
+
+    st.header("Step 2: The Data Warehouse (`transform.py`)")
+    st.markdown("""
+    The raw CSVs are loaded into **DuckDB**, an in-process SQL OLAP database. DuckDB acts as the analytical data warehouse. 
+    
+    Here, SQL is used to clean the data, enforce business logic, and drop the anomalies generated in Step 1 before they corrupt the downstream metrics.
+    """)
+    st.code("""
+-- src/transform.py snippet: Enforcing data integrity
+CREATE OR REPLACE TABLE clean_patients AS
+SELECT DISTINCT
+    patient_id,
+    COALESCE(market, 'Unknown') AS market,
+    status,
+    CAST(intake_date AS DATE) AS intake_date,
+    CAST(churn_date AS DATE) AS churn_date
+FROM raw_patients
+-- Business Logic: A patient cannot churn before they complete intake
+WHERE churn_date IS NULL OR CAST(churn_date AS DATE) >= CAST(intake_date AS DATE);
+    """, language="sql")
+
+    st.header("Step 3: Analytical Modeling (`metrics.py` & `audit.py`)")
+    st.markdown("""
+    With clean tables in DuckDB, the analytics layer calculates the core KPIs. It translates monthly patient volume into weekly session demand, and compares it against the active capacity of the clinician workforce.
+    
+    It also runs 'Forecast vs. Actuals' audits to track HR offer acceptance rates and operational patient attrition.
+    """)
+    st.code("""
+-- src/metrics.py snippet: Calculating Market Bottlenecks
+CREATE OR REPLACE TABLE market_health_dashboard AS
+SELECT 
+    s.market,
+    s.active_clinicians,
+    s.total_active_capacity AS supply_capacity,
+    d.weekly_session_demand AS demand_volume,
+    ROUND((d.weekly_session_demand / s.total_active_capacity) * 100, 1) AS utilization_pct,
+    CASE 
+        WHEN (d.weekly_session_demand / s.total_active_capacity) > 1.0 THEN 'BOTTLENECK'
+        WHEN (d.weekly_session_demand / s.total_active_capacity) > 0.85 THEN 'WARNING'
+        ELSE 'HEALTHY'
+    END as operational_status
+FROM market_supply s
+JOIN market_demand d ON s.market = d.market;
+    """, language="sql")
+
+    st.header("Step 4: The Interactive Frontend (`app.py`)")
+    st.markdown("""
+    Finally, **Streamlit** is used to serve the data to executive stakeholders. It connects directly to the DuckDB warehouse and provides an interactive interface. 
+    
+    The dashboard includes a 'What-If' strategic planning slider, allowing Operations Managers to simulate the impact of new hires on market utilization in real-time.
+    """)
+    st.code("""
+# app.py snippet: Real-time What-If Analysis
+st.sidebar.subheader("Strategic Planning")
+extra_hires = st.sidebar.slider("New Hires per Market", 0, 10, 0)
+avg_capacity = 25 
+
+# Dynamically update the SQL query based on user input
+query = f'''
+    SELECT 
+        market,
+        supply_capacity + ({extra_hires} * {avg_capacity}) as simulated_capacity,
+        ROUND((demand_volume / (supply_capacity + ({extra_hires} * {avg_capacity}))) * 100, 1) as simulated_utilization
+    FROM market_health_dashboard
+'''
+health_df = load_data(query)
+st.dataframe(health_df)
+    """, language="python")
+
+    st.success("By controlling the entire pipeline from raw data generation to executive visualization, this architecture ensures high data integrity and provides actionable operational leverage.")
