@@ -85,7 +85,7 @@ if page == "📊 Executive Dashboard":
     
     col2.metric("Simulated New Supply", f"+{extra_hires * len(health_df)} Clinicians", f"+{extra_hires * len(health_df) * avg_capacity} sessions/wk")
     col3.metric("Critical Markets", len(health_df[health_df['simulated_utilization'] > 100]))
-    
+
     st.divider()
 
     # --- SECOND ROW: Regional Table ---
@@ -167,28 +167,41 @@ if page == "📊 Executive Dashboard":
     
     with col_a:
         st.subheader("Patient Churn vs. Target (15%)")
-        churn_chart = patient_df[['market', 'actual_churn_rate_pct', 'target_churn_rate_pct']].set_index('market')
-        st.bar_chart(churn_chart)
+        
+        # 1. Filter out the "Unknown" routing bin
+        churn_df = patient_df[patient_df['market'] != 'Unknown'].copy()
+        
+        # 2. Add an alert symbol to the market label if it misses the 15% target
+        churn_df['market_label'] = churn_df.apply(
+            lambda x: f"🚨 {x['market']}" if x['actual_churn_rate_pct'] > 15 else x['market'], axis=1
+        )
+        
+        # 3. Create a custom Altair chart so it doesn't artificially "stack" the numbers
+        bar_chart = alt.Chart(churn_df).mark_bar().encode(
+            x=alt.X('market_label:N', title='Market', axis=alt.Axis(labelAngle=-45)),
+            y=alt.Y('actual_churn_rate_pct:Q', title='Actual Churn %'),
+            # Color the bar Red if it exceeds 15%, otherwise keep it Blue
+            color=alt.condition(
+                alt.datum.actual_churn_rate_pct > 15,
+                alt.value('#EF4444'),  
+                alt.value('#3B82F6')   
+            ),
+            tooltip=['market', 'actual_churn_rate_pct', 'target_churn_rate_pct']
+        )
+        
+        # 4. Draw a clear horizontal target line at 15%
+        target_line = alt.Chart(pd.DataFrame({'target': [15]})).mark_rule(
+            color='#F59E0B', strokeDash=[5, 5], strokeWidth=2
+        ).encode(y='target:Q')
+        
+        st.altair_chart(bar_chart + target_line, use_container_width=True)
         
         with st.expander("ℹ️ Understanding this chart"):
             st.markdown("""
             This audits our demand assumptions by comparing actual market attrition against financial models.
-            * **Target Churn Rate:** The business model assumes a baseline 15% patient drop-off.
+            * **Target Churn Rate:** The dashed yellow line represents the 15% baseline allowance.
             * **Actual Churn Rate:** The real historical churn rate derived from EMR data.
-            * **Insight:** Markets where actual churn significantly exceeds the 15% target indicate potential operational issues (poor clinician matching, long wait times).
-            """)
-        
-    with col_b:
-        st.subheader("Clinician Offer Acceptance Audit")
-        st.dataframe(clinician_df[['market', 'total_offers_extended', 'actual_starts', 'actual_start_rate_pct']], use_container_width=True)
-        
-        with st.expander("ℹ️ How to read this table (Metrics & Logic)"):
-            st.markdown("""
-            Monitoring actual starts against the **85% Offer Acceptance** target baseline.
-            * **total_offers_extended:** Total job offers sent to clinician candidates in the HR system.
-            * **actual_starts:** Count of clinicians who reached 'Active' or 'Onboarding' status.
-            * **actual_start_rate_pct:** `(actual_starts / total_offers) * 100`. 
-            * **Insight:** If a market's start rate falls far below 85%, Recruiting needs to audit compensation competitiveness or onboarding delays in that region.
+            * **Insight:** Markets marked in red (🚨) indicate potential operational issues (poor clinician matching, long wait times) that need immediate investigation.
             """)
 
 # ==========================================
