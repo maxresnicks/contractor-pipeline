@@ -68,12 +68,24 @@ if page == "📊 Executive Dashboard":
 
     # --- TOP ROW: KPI Metrics ---
     col1, col2, col3 = st.columns(3)
+    
+    # 1. Calculate the true baseline utilization (without any slider math)
+    baseline_avg_util = (health_df['demand_volume'] / health_df['supply_capacity'] * 100).mean()
+    
+    # 2. Calculate the current simulated average
     avg_util = health_df['simulated_utilization'].mean()
-    col1.metric("Avg Market Utilization", f"{avg_util:.1f}%", 
-                delta=f"{avg_util - 92:.1f}%", delta_color="inverse")
+    
+    # 3. The delta is now the difference between the simulation and the baseline
+    col1.metric(
+        "Avg Market Utilization", 
+        f"{avg_util:.1f}%", 
+        delta=f"{avg_util - baseline_avg_util:.1f}%", 
+        delta_color="inverse"
+    )
+    
     col2.metric("Simulated New Supply", f"+{extra_hires * len(health_df)} Clinicians", f"+{extra_hires * len(health_df) * avg_capacity} sessions/wk")
     col3.metric("Critical Markets", len(health_df[health_df['simulated_utilization'] > 100]))
-
+    
     st.divider()
 
     # --- SECOND ROW: Regional Table ---
