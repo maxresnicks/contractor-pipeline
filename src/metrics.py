@@ -5,7 +5,6 @@ import pandas as pd
 
 def run_metrics():
     conn = get_connection()
-    print("📊 Computing Supply & Demand Metrics...")
 
     # --- 1. Calculate Market Supply (Clinician Capacity) ---
     # We only count 'Active' capacity for current supply, but track 'Onboarding' for future forecasting.

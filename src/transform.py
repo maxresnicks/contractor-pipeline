@@ -1,8 +1,10 @@
+# Ingests raw CSVs into DuckDB, cleans data anomalies (duplicates, logical errors, missing routing), and builds clean staging tables.
+
 from utils import get_connection
 
 def run_transform():
     conn = get_connection()
-    print("🔄 Starting transformation layer...")
+
 
     # --- 1. Load Raw CSVs into DuckDB ---
     # DuckDB can read CSVs directly and create tables on the fly
@@ -60,9 +62,9 @@ def run_transform():
     clinician_count = conn.execute("SELECT COUNT(*) FROM clean_clinicians").fetchone()[0]
     patient_count = conn.execute("SELECT COUNT(*) FROM clean_patients").fetchone()[0]
     
-    print(f"🎉 Transformation complete! Ready for modeling:")
-    print(f"   📊 Clean Clinicians: {clinician_count}")
-    print(f"   📊 Clean Patients: {patient_count}")
+   
+    print(f"    Clean Clinicians: {clinician_count}")
+    print(f"    Clean Patients: {patient_count}")
 
 if __name__ == "__main__":
     run_transform()

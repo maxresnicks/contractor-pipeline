@@ -359,4 +359,4 @@ health_df = load_data(query)
 st.dataframe(health_df)
     """, language="python")
 
-    st.success("By controlling the entire pipeline from raw data generation to executive visualization, this architecture ensures high data integrity and provides actionable operational leverage.")
+    st.success("Max Resnick 2026 :D")
