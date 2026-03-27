@@ -4,7 +4,7 @@ import pandas as pd
 import altair as alt
 
 # --- Page Configuration ---
-st.set_page_config(page_title="Two Chairs: Capacity Dashboard", page_icon="🪑", layout="wide")
+st.set_page_config(page_title="Mental Health Tech Company Capacity Dashboard", page_icon="🪑", layout="wide")
 
 # --- Database Connection ---
 @st.cache_data
@@ -34,7 +34,7 @@ if page == "📊 Executive Dashboard":
 # PAGE 1: EXECUTIVE DASHBOARD
 # ==========================================
 if page == "📊 Executive Dashboard":
-    st.title("🪑🪑 Two Chairs: Market Capacity & Operations Dashboard")
+    st.title("Market Capacity & Operations Dashboard")
     st.markdown("""
     Monitoring Supply (Clinicians) vs. Demand (Patients) across regional markets.
     *Simulating active capacity plus hiring forecasts.*

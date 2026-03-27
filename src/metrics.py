@@ -36,7 +36,7 @@ def run_metrics():
     """)
     print("✅ Market Demand modeled.")
 
-    # --- 3. Supply vs. Demand Comparison (The core Two Chairs KPI) ---
+    # --- 3. Supply vs. Demand Comparison
     conn.execute("""
         CREATE OR REPLACE TABLE market_health_dashboard AS
         SELECT 
